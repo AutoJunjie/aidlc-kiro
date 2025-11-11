@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/xholacracy
+    username: holacracy_user
+    password: holacracy_pass
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+
+logging:
+  level:
+    root: INFO
+    com.xholacracy: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG

@@ -1,0 +1,49 @@
+@startuml 圈子和角色管理流程
+
+title 圈子和角色管理业务流程
+
+|圈引导 (Circle Lead)|
+start
+:创建子圈子;
+:定义圈子名称、目的和职责;
+
+|系统|
+:自动创建四个特殊角色:
+- Circle Lead
+- Facilitator
+- Secretary
+- Circle Rep;
+
+|圈引导|
+:在圈子内创建角色;
+:定义角色名称、目的、职责和领域;
+
+:将角色分配给伙伴;
+note right
+  一个伙伴可以填充多个角色
+  一个角色可以分配给多个伙伴
+end note
+
+|系统|
+if (角色是否有伙伴分配?) then (否)
+  :自动将角色分配给圈引导;
+else (是)
+  :记录角色分配;
+endif
+
+|圈引导|
+:分配特殊角色给伙伴;
+note right
+  - Facilitator: 主持会议
+  - Secretary: 记录维护
+  - Circle Rep: 代表圈子
+end note
+
+|伙伴|
+:查看圈子层级图;
+:查看角色关系图;
+:了解组织结构和职责分工;
+
+stop
+
+@enduml

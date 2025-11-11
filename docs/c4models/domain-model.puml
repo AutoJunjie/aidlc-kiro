@@ -1,0 +1,538 @@
+@startuml XHolacracy Domain Model
+
+!define ENTITY class
+!define VALUE_OBJECT class
+!define AGGREGATE class
+
+' 组织聚合根
+AGGREGATE Organization <<Aggregate Root>> {
+  + organizationId: OrganizationId
+  + name: String
+  + description: String
+  + anchorCircle: Circle
+  --
+  + create(name, description): Organization
+  + updateInfo(name, description): void
+  + getAnchorCircle(): Circle
+}
+
+' 圈子聚合根
+AGGREGATE Circle <<Aggregate Root>> {
+  + circleId: CircleId
+  + name: String
+  + purpose: String
+  + accountabilities: List<String>
+  + parentCircleId: CircleId
+  + organizationId: OrganizationId
+  + subCircles: List<Circle>
+  + roles: List<Role>
+  + specialRoles: SpecialRoles
+  --
+  + create(name, purpose, parentCircleId): Circle
+  + addSubCircle(subCircle: Circle): void
+  + removeSubCircle(circleId: CircleId): void
+  + addRole(role: Role): void
+  + removeRole(roleId: RoleId): void
+  + updateInfo(name, purpose, accountabilities): void
+  + assignSpecialRole(roleType, partnerId): void
+}
+
+' 特殊角色值对象
+VALUE_OBJECT SpecialRoles <<Value Object>> {
+  + circleLead: RoleAssignment
+  + facilitator: RoleAssignment
+  + secretary: RoleAssignment
+  + circleRep: RoleAssignment
+  --
+  + create(): SpecialRoles
+  + assignRole(roleType, partnerId): void
+  + getRoleAssignment(roleType): RoleAssignment
+}
+
+' 角色实体
+ENTITY Role <<Entity>> {
+  + roleId: RoleId
+  + name: String
+  + purpose: String
+  + accountabilities: List<String>
+  + domains: List<Domain>
+  + circleId: CircleId
+  + isSpecialRole: Boolean
+  + assignments: List<RoleAssignment>
+  --
+  + create(name, purpose, circleId): Role
+  + updateDefinition(name, purpose, accountabilities): void
+  + addDomain(domain: Domain): void
+  + removeDomain(domain: Domain): void
+  + assignToPartner(partnerId: PartnerId): RoleAssignment
+  + removeAssignment(assignmentId: AssignmentId): void
+  + isAssignedTo(partnerId: PartnerId): Boolean
+}
+
+' 角色分配实体
+ENTITY RoleAssignment <<Entity>> {
+  + assignmentId: AssignmentId
+  + roleId: RoleId
+  + partnerId: PartnerId
+  + assignedDate: DateTime
+  + assignedBy: PartnerId
+  --
+  + create(roleId, partnerId, assignedBy): RoleAssignment
+  + getAssignmentInfo(): AssignmentInfo
+}
+
+' 领域实体
+ENTITY Domain <<Entity>> {
+  + id: String
+  + name: String
+  + description: String
+  + controlType: DomainControlType
+  --
+  + create(name, description): Domain
+  + create(name, description, controlType): Domain
+}
+
+' 领域控制类型枚举
+enum DomainControlType {
+  EXCLUSIVE
+  SHARED
+  ADVISORY
+}
+
+' 伙伴实体
+ENTITY Partner <<Entity>> {
+  + partnerId: PartnerId
+  + name: String
+  + email: String
+  + roleAssignments: List<RoleAssignment>
+  --
+  + create(name, email): Partner
+  + getRoles(): List<Role>
+  + hasRole(roleId: RoleId): Boolean
+}
+
+' 提案聚合根
+AGGREGATE Proposal <<Aggregate Root>> {
+  + proposalId: ProposalId
+  + title: String
+  + tension: Tension
+  + proposalType: ProposalType
+  + circleId: CircleId
+  + proposerId: PartnerId
+  + status: ProposalStatus
+  + createdDate: DateTime
+  + submittedDate: DateTime
+  + approvalProcess: ApprovalProcess
+  + decisionHistory: List<DecisionEvent>
+  --
+  + create(title, tension, type, circleId, proposerId): Proposal
+  + submit(): void
+  + startProposalStage(): void
+  + moveToClarificationStage(): void
+  + addClarificationQuestion(question: Question): void
+  + moveToReactionStage(): void
+  + addReaction(reaction: Reaction): void
+  + moveToAmendStage(): void
+  + amendProposal(amendment: Amendment): void
+  + moveToObjectionStage(): void
+  + addObjection(objection: Objection): void
+  + validateObjection(objectionId, isValid): void
+  + moveToIntegrationStage(): void
+  + integrateObjection(integration: Integration): void
+  + approve(): void
+  + withdraw(): void
+  + reject(): void
+  + apply(appliedBy: PartnerId): void
+}
+
+' 紧张值对象
+VALUE_OBJECT Tension <<Value Object>> {
+  + description: String
+  + currentState: String
+  + desiredState: String
+  + examples: List<String>
+  + context: String
+  --
+  + create(description, currentState, desiredState): Tension
+}
+
+' 提案类型枚举
+enum ProposalType {
+  ROLE_MODIFICATION
+  POLICY_ADJUSTMENT
+  CIRCLE_STRUCTURE_CHANGE
+  PROCESS_OPTIMIZATION
+}
+
+' 提案状态枚举
+enum ProposalStatus {
+  DRAFT
+  SUBMITTED
+  PROPOSAL_STAGE
+  CLARIFICATION_STAGE
+  REACTION_STAGE
+  AMEND_STAGE
+  OBJECTION_STAGE
+  INTEGRATION_STAGE
+  APPROVED
+  APPLIED
+  WITHDRAWN
+  REJECTED
+}
+
+' 审批流程值对象
+VALUE_OBJECT ApprovalProcess <<Value Object>> {
+  + approvalThreshold: ApprovalThreshold
+  + requiredApprovers: List<PartnerId>
+  + timeLimit: Duration
+  + requiresUnanimous: Boolean
+  --
+  + create(threshold, approvers): ApprovalProcess
+  + isApproved(votes: List<Vote>): Boolean
+}
+
+' 审批阈值值对象
+VALUE_OBJECT ApprovalThreshold <<Value Object>> {
+  + approvalPercentage: Decimal
+  + minimumApprovals: Integer
+  + maximumObjections: Integer
+  --
+  + create(percentage, minApprovals): ApprovalThreshold
+  + isMet(approvals, objections, total): Boolean
+}
+
+' 决策事件值对象
+VALUE_OBJECT DecisionEvent <<Value Object>> {
+  + eventId: EventId
+  + eventType: DecisionEventType
+  + timestamp: DateTime
+  + actorId: PartnerId
+  + content: String
+  + metadata: Map<String, Object>
+  --
+  + create(type, actorId, content): DecisionEvent
+}
+
+' 决策事件类型枚举
+enum DecisionEventType {
+  PROPOSAL_CREATED
+  PROPOSAL_SUBMITTED
+  STAGE_CHANGED
+  QUESTION_ASKED
+  QUESTION_ANSWERED
+  REACTION_ADDED
+  PROPOSAL_AMENDED
+  OBJECTION_RAISED
+  OBJECTION_VALIDATED
+  OBJECTION_INVALIDATED
+  INTEGRATION_PROPOSED
+  VOTE_CAST
+  PROPOSAL_APPROVED
+  PROPOSAL_APPLIED
+  PROPOSAL_WITHDRAWN
+  PROPOSAL_REJECTED
+}
+
+' 澄清问题值对象
+VALUE_OBJECT Question <<Value Object>> {
+  + questionId: QuestionId
+  + askerId: PartnerId
+  + question: String
+  + answer: String
+  + timestamp: DateTime
+  --
+  + create(askerId, question): Question
+  + answer(answer: String): void
+}
+
+' 反应值对象
+VALUE_OBJECT Reaction <<Value Object>> {
+  + reactionId: ReactionId
+  + reactorId: PartnerId
+  + content: String
+  + timestamp: DateTime
+  + order: Integer
+  --
+  + create(reactorId, content, order): Reaction
+}
+
+' 修改值对象
+VALUE_OBJECT Amendment <<Value Object>> {
+  + amendmentId: AmendmentId
+  + changes: String
+  + reason: String
+  + timestamp: DateTime
+  --
+  + create(changes, reason): Amendment
+}
+
+' 反对实体
+ENTITY Objection <<Entity>> {
+  + objectionId: ObjectionId
+  + objectorId: PartnerId
+  + reasoning: String
+  + validationCriteria: ObjectionCriteria
+  + isValid: Boolean
+  + validatedBy: PartnerId
+  + timestamp: DateTime
+  --
+  + create(objectorId, reasoning, criteria): Objection
+  + validate(isValid, validatedBy): void
+  + isValidObjection(): Boolean
+}
+
+' 反对标准值对象
+VALUE_OBJECT ObjectionCriteria <<Value Object>> {
+  + reducesCircleCapability: Boolean
+  + limitsAccountability: Boolean
+  + problemNotExistWithout: Boolean
+  + causesHarm: Boolean
+  --
+  + create(): ObjectionCriteria
+  + isValid(): Boolean
+}
+
+' 集成值对象
+VALUE_OBJECT Integration <<Value Object>> {
+  + integrationId: IntegrationId
+  + objectionId: ObjectionId
+  + proposedSolution: String
+  + acceptedBy: PartnerId
+  + timestamp: DateTime
+  --
+  + create(objectionId, solution): Integration
+}
+
+' 投票值对象
+VALUE_OBJECT Vote <<Value Object>> {
+  + voteId: VoteId
+  + voterId: PartnerId
+  + voteType: VoteType
+  + timestamp: DateTime
+  + comment: String
+  --
+  + create(voterId, voteType): Vote
+}
+
+' 投票类型枚举
+enum VoteType {
+  APPROVE
+  OBJECT
+  ABSTAIN
+}
+
+' 治理会议聚合根
+AGGREGATE GovernanceMeeting <<Aggregate Root>> {
+  + meetingId: MeetingId
+  + circleId: CircleId
+  + scheduledDate: DateTime
+  + duration: Duration
+  + status: MeetingStatus
+  + facilitatorId: PartnerId
+  + secretaryId: PartnerId
+  + agenda: MeetingAgenda
+  + participants: List<PartnerId>
+  + meetingRecord: MeetingRecord
+  --
+  + create(circleId, scheduledDate, duration): GovernanceMeeting
+  + addAgendaItem(proposalId: ProposalId): void
+  + reorderAgenda(newOrder: List<ProposalId>): void
+  + start(): void
+  + moveToNextStage(): void
+  + processAgendaItem(proposalId: ProposalId): void
+  + completeAgendaItem(proposalId: ProposalId): void
+  + end(): void
+  + cancel(): void
+  + addParticipant(partnerId: PartnerId): void
+}
+
+' 会议状态枚举
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+' 会议议程值对象
+VALUE_OBJECT MeetingAgenda <<Value Object>> {
+  + items: List<AgendaItem>
+  + currentItemIndex: Integer
+  --
+  + create(): MeetingAgenda
+  + addItem(proposalId: ProposalId): void
+  + reorder(newOrder: List<ProposalId>): void
+  + getCurrentItem(): AgendaItem
+  + moveToNext(): void
+}
+
+' 议程项值对象
+VALUE_OBJECT AgendaItem <<Value Object>> {
+  + itemId: ItemId
+  + proposalId: ProposalId
+  + order: Integer
+  + status: AgendaItemStatus
+  --
+  + create(proposalId, order): AgendaItem
+  + markInProgress(): void
+  + markCompleted(): void
+}
+
+' 议程项状态枚举
+enum AgendaItemStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+' 会议记录值对象
+VALUE_OBJECT MeetingRecord <<Value Object>> {
+  + checkInNotes: String
+  + processedProposals: List<ProposalId>
+  + outcomes: Map<ProposalId, ProposalOutcome>
+  + attendance: List<PartnerId>
+  + additionalNotes: String
+  + closingNotes: String
+  --
+  + create(): MeetingRecord
+  + addCheckInNote(note: String): void
+  + recordProposalOutcome(proposalId, outcome): void
+  + recordAttendance(participants: List<PartnerId>): void
+  + addNote(note: String): void
+}
+
+' 提案结果值对象
+VALUE_OBJECT ProposalOutcome <<Value Object>> {
+  + proposalId: ProposalId
+  + finalStatus: ProposalStatus
+  + votes: List<Vote>
+  + objections: List<Objection>
+  + summary: String
+  --
+  + create(proposalId, status): ProposalOutcome
+}
+
+' 值对象 - ID类型
+VALUE_OBJECT OrganizationId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT CircleId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT RoleId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT PartnerId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT ProposalId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT MeetingId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT AssignmentId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT ObjectionId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT QuestionId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT ReactionId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT AmendmentId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT IntegrationId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT VoteId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT EventId <<Value Object>> {
+  + value: String
+}
+
+VALUE_OBJECT ItemId <<Value Object>> {
+  + value: String
+}
+
+' 关系定义
+Organization "1" *-- "1" Circle : anchorCircle
+Circle "1" *-- "0..*" Circle : subCircles
+Circle "1" *-- "1..*" Role : roles
+Circle "1" *-- "1" SpecialRoles : specialRoles
+Circle "1" -- "0..*" Proposal : proposals
+Circle "1" -- "0..*" GovernanceMeeting : meetings
+
+Role "1" *-- "0..*" Domain : domains
+Role "1" -- "0..*" RoleAssignment : assignments
+
+RoleAssignment "*" -- "1" Partner : partner
+RoleAssignment "*" -- "1" Role : role
+
+SpecialRoles "1" *-- "4" RoleAssignment : specialRoleAssignments
+
+Proposal "1" *-- "1" Tension : tension
+Proposal "1" *-- "1" ApprovalProcess : approvalProcess
+Proposal "1" *-- "0..*" DecisionEvent : decisionHistory
+Proposal "1" *-- "0..*" Question : questions
+Proposal "1" *-- "0..*" Reaction : reactions
+Proposal "1" *-- "0..*" Amendment : amendments
+Proposal "1" *-- "0..*" Objection : objections
+Proposal "1" *-- "0..*" Integration : integrations
+Proposal "1" *-- "0..*" Vote : votes
+
+Objection "1" *-- "1" ObjectionCriteria : validationCriteria
+
+ApprovalProcess "1" *-- "1" ApprovalThreshold : approvalThreshold
+
+GovernanceMeeting "1" *-- "1" MeetingAgenda : agenda
+GovernanceMeeting "1" *-- "1" MeetingRecord : meetingRecord
+
+MeetingAgenda "1" *-- "0..*" AgendaItem : items
+
+MeetingRecord "1" *-- "0..*" ProposalOutcome : outcomes
+
+ProposalOutcome "1" -- "0..*" Vote : votes
+ProposalOutcome "1" -- "0..*" Objection : objections
+
+note right of Organization
+  组织聚合根
+  管理整个组织结构
+end note
+
+note right of Circle
+  圈子聚合根
+  管理圈子层次结构、
+  角色和子圈子
+end note
+
+note right of Proposal
+  提案聚合根
+  管理完整的集成决策流程
+  包含六个阶段的状态转换
+end note
+
+note right of GovernanceMeeting
+  治理会议聚合根
+  管理会议流程和议程
+end note
+
+@enduml

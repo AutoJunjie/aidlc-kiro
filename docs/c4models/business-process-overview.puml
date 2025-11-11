@@ -1,0 +1,134 @@
+@startuml XHolacracy系统业务流程概览
+
+title XHolacracy MVP 业务流程概览
+
+!define PROCESS rectangle
+!define ACTOR actor
+
+ACTOR "系统管理员" as Admin
+ACTOR "圈引导\n(Circle Lead)" as Lead
+ACTOR "伙伴\n(Partner)" as Partner
+ACTOR "协调员\n(Facilitator)" as Facilitator
+ACTOR "秘书\n(Secretary)" as Secretary
+
+package "组织和圈子管理" {
+  PROCESS "创建组织" as CreateOrg
+  PROCESS "创建圈子层次结构" as CreateCircle
+  PROCESS "查看圈子层级图" as ViewCircleHierarchy
+}
+
+package "角色管理" {
+  PROCESS "创建角色" as CreateRole
+  PROCESS "定义角色职责和领域" as DefineRole
+  PROCESS "分配角色给伙伴" as AssignRole
+  PROCESS "管理特殊角色" as ManageSpecialRole
+  PROCESS "查看角色关系图" as ViewRoleRelation
+}
+
+package "提案管理" {
+  PROCESS "识别和记录紧张" as RecordTension
+  PROCESS "创建提案" as CreateProposal
+  PROCESS "提交提案" as SubmitProposal
+  PROCESS "配置审批流程" as ConfigureApproval
+}
+
+package "集成决策流程" {
+  PROCESS "提案阶段" as ProposalStage
+  PROCESS "澄清阶段" as ClarificationStage
+  PROCESS "反应阶段" as ReactionStage
+  PROCESS "修改阶段" as AmendStage
+  PROCESS "反对阶段" as ObjectionStage
+  PROCESS "集成阶段" as IntegrationStage
+}
+
+package "治理会议管理" {
+  PROCESS "创建治理会议" as CreateMeeting
+  PROCESS "构建会议议程" as BuildAgenda
+  PROCESS "执行会议流程" as ExecuteMeeting
+  PROCESS "记录会议内容" as RecordMeeting
+  PROCESS "归档会议记录" as ArchiveMeeting
+}
+
+package "提案应用" {
+  PROCESS "应用已批准提案" as ApplyProposal
+  PROCESS "更新组织结构" as UpdateStructure
+  PROCESS "通知相关人员" as NotifyStakeholders
+}
+
+' 组织和圈子管理流程
+Admin --> CreateOrg
+CreateOrg --> CreateCircle
+Lead --> CreateCircle
+CreateCircle --> ViewCircleHierarchy
+Partner --> ViewCircleHierarchy
+
+' 角色管理流程
+Lead --> CreateRole
+CreateRole --> DefineRole
+DefineRole --> AssignRole
+Lead --> ManageSpecialRole
+AssignRole --> ViewRoleRelation
+Partner --> ViewRoleRelation
+
+' 提案管理流程
+Partner --> RecordTension
+RecordTension --> CreateProposal
+CreateProposal --> SubmitProposal
+Lead --> ConfigureApproval
+SubmitProposal --> CreateMeeting
+
+' 治理会议流程
+Secretary --> CreateMeeting
+CreateMeeting --> BuildAgenda
+BuildAgenda --> ExecuteMeeting
+Facilitator --> ExecuteMeeting
+
+' 集成决策流程
+ExecuteMeeting --> ProposalStage
+ProposalStage --> ClarificationStage
+ClarificationStage --> ReactionStage
+ReactionStage --> AmendStage
+AmendStage --> ObjectionStage
+ObjectionStage --> IntegrationStage
+IntegrationStage ..> ObjectionStage : 有反对时返回
+ObjectionStage --> ApplyProposal : 无反对时批准
+
+' 会议记录和归档
+ExecuteMeeting --> RecordMeeting
+Secretary --> RecordMeeting
+RecordMeeting --> ArchiveMeeting
+Partner --> ArchiveMeeting : 查看历史记录
+
+' 提案应用流程
+Secretary --> ApplyProposal
+ApplyProposal --> UpdateStructure
+UpdateStructure --> NotifyStakeholders
+NotifyStakeholders --> ViewCircleHierarchy : 更新可视化
+NotifyStakeholders --> ViewRoleRelation : 更新可视化
+
+note right of CreateOrg
+  系统管理员创建组织
+  自动创建锚圈
+end note
+
+note right of CreateCircle
+  圈引导创建子圈子
+  自动创建四个特殊角色
+end note
+
+note right of RecordTension
+  任何伙伴都可以
+  识别和记录紧张
+end note
+
+note right of ExecuteMeeting
+  协调员引导会议
+  执行集成决策流程
+end note
+
+note right of ApplyProposal
+  秘书应用已批准提案
+  更新组织结构
+end note
+
+@enduml

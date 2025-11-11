@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: xholacracy-postgres
+    environment:
+      POSTGRES_DB: xholacracy
+      POSTGRES_USER: holacracy_user
+      POSTGRES_PASSWORD: holacracy_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U holacracy_user -d xholacracy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - xholacracy-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: xholacracy-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/xholacracy
+      SPRING_DATASOURCE_USERNAME: holacracy_user
+      SPRING_DATASOURCE_PASSWORD: holacracy_pass
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - xholacracy-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: xholacracy-frontend
+    environment:
+      REACT_APP_API_URL: http://localhost:8080/api/v1
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - xholacracy-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  xholacracy-network:
+    driver: bridge
